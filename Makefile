@@ -6,7 +6,7 @@
 TARGET := prime-checker
 
 # Имя исходного файла
-SRC := prime_checker.cpp 
+SRC := ConsoleApplication5.cpp 
 
 # Переменные для сборки пакета
 PKG_NAME := $(TARGET)-1.0
