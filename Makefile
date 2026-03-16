@@ -5,20 +5,21 @@
 # Имя исполняемого файла
 TARGET = prime_checker
 
-# Имя исходного файла 
-SRC = ConsoleApplication5.cpp
+# Имя исходного файла
+SRC = ConsoleApplication4.cpp
 
 # Компилятор C++
 CXX = g++
 
 # Флаги компиляции:
-# -Wall, -Wextra: Включить все предупреждения
-# -std=c++17: Использовать стандарт C++17
-# -O2: Оптимизация для производительности
 CXXFLAGS = -Wall -Wextra -std=c++17 -O2
 
+# Имя временной папки и DEB файла
+PKG_NAME = prime_checker-1.0
+DEB_FILE = $(PKG_NAME).deb
+
 # ====================================================================
-# Цели (Rules)
+# Цели 
 # ====================================================================
 
 # Цель по умолчанию 
@@ -26,67 +27,78 @@ CXXFLAGS = -Wall -Wextra -std=c++17 -O2
 all: $(TARGET)
 
 # --------------------------------------------------------------------
-# 1. Сборка 
+# Подготовка среды (Установка зависимостей)
 # --------------------------------------------------------------------
-$(TARGET): $(SRC)
-	# Проверка наличия компилятора 
-	@command -v $(CXX) >/dev/null 2>&1 || { \
-        echo >&2 "ERROR: Compiler $(CXX) is not found on the system."; \
-        echo >&2 "Please install essential build tools (e.g., 'sudo apt install build-essential')."; \
+.PHONY: setup
+setup:
+	@echo "--- Checking and installing necessary build tools via apt ---"
+	@command -v apt >/dev/null 2>&1 || { \
+        echo >&2 "ERROR: apt package manager not found. This script is for Debian/Ubuntu systems."; \
         exit 1; \
     }
-	@echo "--- Compiling $(SRC) with flags: $(CXXFLAGS) ---"
-	$(CXX) $(CXXFLAGS) $(SRC) -o $(TARGET)
+	# Установка build-essential (для компиляции) и dpkg-dev (для создания .deb)
+	sudo apt update && sudo apt install -y build-essential dpkg-dev
 
 # --------------------------------------------------------------------
-# Тестирование
+# 1. Сборка 
 # --------------------------------------------------------------------
-.PHONY: run
-run: $(TARGET)
-	@echo "--- Running test with input 17 ---"
-	./$(TARGET) 17
+$(TARGET): setup $(SRC)
+	@echo "--- Компиляция $(SRC) с флагами: $(CXXFLAGS) ---"
+	$(CXX) $(CXXFLAGS) $(SRC) -o $(TARGET)
+
+
+# --------------------------------------------------------------------
+# 2. Создание пакета DEB 
+# --------------------------------------------------------------------
+.PHONY: package
+package: clean setup all
+	@echo "--- Подготовка структуры пакета DEB ---"
+	
+	# Проверка dpkg-deb
+	@command -v dpkg-deb >/dev/null 2>&1 || { \
+        echo >&2 "ERROR: dpkg-deb tool not found even after setup."; \
+        exit 1; \
+    }
+	
+	# 1. Создание временной структуры
+	rm -rf $(PKG_NAME)
+	mkdir -p $(PKG_NAME)/usr/bin
+	
+	# 2. Копирование готового исполняемого файла
+	cp $(TARGET) $(PKG_NAME)/usr/bin/
+	
+	# 3. Создание директории DEBIAN и файла control
+	mkdir -p $(PKG_NAME)/DEBIAN
+	echo "Package: prime-checker" > $(PKG_NAME)/DEBIAN/control
+	echo "Version: 1.0" >> $(PKG_NAME)/DEBIAN/control
+	echo "Architecture: amd64" >> $(PKG_NAME)/DEBIAN/control
+	echo "Maintainer: Team Name <team.email@example.com>" >> $(PKG_NAME)/DEBIAN/control 
+
+	echo "Depends: build-essential" >> $(PKG_NAME)/DEBIAN/control 
+	echo "Description: A simple C++ prime number checker tool for command line." >> $(PKG_NAME)/DEBIAN/control
+
+	# 4. Сборка .deb пакета
+	dpkg-deb --build $(PKG_NAME)
+	rm -rf $(PKG_NAME)
+	rm -f $(TARGET)
+	@echo "--------------------------------------------------------------------"
+	@echo "SUCCESS: DEB package created: $(DEB_FILE)"
+	@echo "--------------------------------------------------------------------"
+
+# --------------------------------------------------------------------
+# 3. Установка созданного пакета
+# --------------------------------------------------------------------
+.PHONY: install
+install: package
+	@echo "--- Installing the generated DEB package using apt ---"
+	sudo apt install -y ./$(DEB_FILE)
 
 # --------------------------------------------------------------------
 # Очистка
 # --------------------------------------------------------------------
 .PHONY: clean
 clean:
-	@echo "Cleaning up generated files..."
+	@echo "Очистка сгенерированных файлов..."
 	rm -f $(TARGET)
-
-# --------------------------------------------------------------------
-# 3. Создание DEB пакета 
-# --------------------------------------------------------------------
-.PHONY: package
-package: clean all
-	@echo "--- Preparing DEB package structure ---"
-	
-	# Проверка
-	@command -v dpkg-deb >/dev/null 2>&1 || { \
-        echo >&2 "ERROR: dpkg-deb tool not found. Please install 'dpkg-dev' package (e.g., 'sudo apt install dpkg-dev')."; \
-        exit 1; \
-    }
-	
-	# 1. Создание временной структуры
-	rm -rf ./prime-checker-1.0
-	mkdir -p ./prime-checker-1.0/usr/bin
-	
-	# 2. Копирование готового исполняемого файла
-	cp $(TARGET) ./prime-checker-1.0/usr/bin/
-	
-	# 3. Создание директории DEBIAN и файла control
-	mkdir -p ./prime-checker-1.0/DEBIAN
-	echo "Package: prime-checker" > ./prime-checker-1.0/DEBIAN/control
-	echo "Version: 1.0" >> ./prime-checker-1.0/DEBIAN/control
-	echo "Architecture: amd64" >> ./prime-checker-1.0/DEBIAN/control
-	echo "Maintainer: Team Name <team.email@example.com>" >> ./prime-checker-1.0/DEBIAN/control
-	
-	echo "Depends: build-essential" >> ./prime-checker-1.0/DEBIAN/control
-	echo "Description: A simple C++ prime number checker tool for command line." >> ./prime-checker-1.0/DEBIAN/control
-
-	# 4. Сборка .deb пакета
-	dpkg-deb --build ./prime-checker-1.0
-	
-	@echo "--------------------------------------------------------------------"
-	@echo "SUCCESS: DEB package created: prime-checker-1.0.deb"
-	@echo "--------------------------------------------------------------------"
+	rm -f $(DEB_FILE)
+	rm -rf $(PKG_NAME)
