@@ -1,92 +1,75 @@
 # ====================================================================
-# Настройки проекта
+# КОНФИГУРАЦИЯ
 # ====================================================================
 
-# Имя исполняемого файла
-TARGET = prime-checker
+# Имя компилируемого файла 
+TARGET := prime-checker
 
 # Имя исходного файла
-SRC = ConsoleApplication4.cpp
+SRC := prime_checker.cpp 
 
-# Компилятор C++
-CXX = g++
+# Переменные для сборки пакета
+PKG_NAME := $(TARGET)-1.0
+DEB_FILE := $(PKG_NAME).deb
 
-# Флаги компиляции:
-CXXFLAGS = -Wall -Wextra -std=c++17 -O2
+# Компилятор и флаги
+CXX := g++
+CXXFLAGS := -Wall -Wextra -std=c++17
+LDFLAGS := 
 
-# Имя временной папки и DEB файла
-PKG_NAME = prime-checker-1.0
-DEB_FILE = $(PKG_NAME).deb
+# Директория для временной сборки пакета
+BUILD_DIR := $(PKG_NAME)
 
 # ====================================================================
-# Цели 
+# ОСНОВНЫЕ ЦЕЛИ
 # ====================================================================
 
-# Цель по умолчанию 
-.PHONY: all
+.PHONY: all clean package install
+
+# Цель по умолчанию
 all: $(TARGET)
 
-# --------------------------------------------------------------------
-# Подготовка среды (Установка зависимостей)
-# --------------------------------------------------------------------
-.PHONY: setup
-setup:
-	@echo "--- Checking and installing necessary build tools via apt ---"
-	@command -v apt >/dev/null 2>&1 || { \
-        echo >&2 "ERROR: apt package manager not found. This script is for Debian/Ubuntu systems."; \
-        exit 1; \
-    }
-	# Установка build-essential (для компиляции) и dpkg-dev (для создания .deb)
-	sudo apt update && sudo apt install -y build-essential dpkg-dev
-
-# --------------------------------------------------------------------
-# 1. Сборка 
-# --------------------------------------------------------------------
-$(TARGET): setup $(SRC)
-	@echo "--- Компиляция $(SRC) с флагами: $(CXXFLAGS) ---"
-	$(CXX) $(CXXFLAGS) $(SRC) -o $(TARGET)
-
+# Компиляция: Создание исполняемого файла
+$(TARGET): $(SRC)
+	@echo "--- Компиляция $(TARGET) ---"
+	$(CXX) $(CXXFLAGS) $(SRC) -o $(TARGET) $(LDFLAGS)
 
 # --------------------------------------------------------------------
 # 2. Создание пакета DEB 
 # --------------------------------------------------------------------
-.PHONY: package
-package: clean setup all
+package: clean setup_deb all
 	@echo "--- Подготовка структуры пакета DEB ---"
 	
-	# Проверка dpkg-deb
-	@command -v dpkg-deb >/dev/null 2>&1 || { \
-        echo >&2 "ERROR: dpkg-deb tool not found even after setup."; \
-        exit 1; \
-    }
-	
 	# 1. Создание временной структуры
-	rm -rf $(PKG_NAME)
-	mkdir -p $(PKG_NAME)/usr/bin
+	rm -rf $(BUILD_DIR)
+	mkdir -p $(BUILD_DIR)/usr/bin
 	
 	# 2. Копирование готового исполняемого файла
-	cp $(TARGET) $(PKG_NAME)/usr/bin/
+	cp $(TARGET) $(BUILD_DIR)/usr/bin/
 	
 	# 3. Создание директории DEBIAN и файла control
-	mkdir -p $(PKG_NAME)/DEBIAN
-	echo "Package: prime-checker" > $(PKG_NAME)/DEBIAN/control
-	echo "Version: 1.0" >> $(PKG_NAME)/DEBIAN/control
-	echo "Architecture: amd64" >> $(PKG_NAME)/DEBIAN/control
-	echo "Maintainer: Team Name <team.email@example.com>" >> $(PKG_NAME)/DEBIAN/control 
-
-	echo "Depends: build-essential" >> $(PKG_NAME)/DEBIAN/control 
-	echo "Description: A simple C++ prime number checker tool for command line." >> $(PKG_NAME)/DEBIAN/control
+	mkdir -p $(BUILD_DIR)/DEBIAN
+	
+	echo "Package: $(TARGET)" > $(BUILD_DIR)/DEBIAN/control
+	echo "Version: 1.0" >> $(BUILD_DIR)/DEBIAN/control
+	echo "Architecture: amd64" >> $(BUILD_DIR)/DEBIAN/control
+	echo "Maintainer: Team Name <team.email@example.com>" >> $(BUILD_DIR)/DEBIAN/control 
+	
+	# Зависимости: 
+	echo "Depends: libc6 (>= 2.29)" >> $(BUILD_DIR)/DEBIAN/control 
+	echo "Description: A simple C++ prime number checker tool." >> $(BUILD_DIR)/DEBIAN/control
 
 	# 4. Сборка .deb пакета
-	dpkg-deb --build $(PKG_NAME)
-	rm -rf $(PKG_NAME)
-	rm -f $(TARGET)
+	dpkg-deb --build $(BUILD_DIR)
+	
+	# Очистка временной папки (сохраняем .deb файл)
+	rm -rf $(BUILD_DIR)
 	@echo "--------------------------------------------------------------------"
 	@echo "SUCCESS: DEB package created: $(DEB_FILE)"
 	@echo "--------------------------------------------------------------------"
 
 # --------------------------------------------------------------------
-# 3. Установка созданного пакета
+# 3. Установка созданного пакета 
 # --------------------------------------------------------------------
 .PHONY: install
 install: package
@@ -101,4 +84,16 @@ clean:
 	@echo "Очистка сгенерированных файлов..."
 	rm -f $(TARGET)
 	rm -f $(DEB_FILE)
-	rm -rf $(PKG_NAME)
+	rm -rf $(BUILD_DIR)
+
+# --------------------------------------------------------------------
+# Вспомогательные цели
+# --------------------------------------------------------------------
+setup:
+	# Проверка наличия dpkg-deb (для надежности в CI)
+	@command -v dpkg-deb >/dev/null 2>&1 || { \
+        echo >&2 "ERROR: dpkg-deb tool not found. Running apt install..."; \
+        sudo apt-get update && sudo apt-get install -y dpkg-dev; \
+    }
+
+setup_deb: setup 
