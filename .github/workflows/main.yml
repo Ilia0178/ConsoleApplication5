@@ -9,16 +9,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y build-essential dpkg-dev
-
-      - name: Build and Package
+      - name: Install build dependencies
         run: |
-          make clean 
+          sudo apt-get update
+          sudo apt-get install -y build-essential dpkg-dev
+
+      - name: Build and package
+        run: |
           make package
 
       - name: Upload DEB package
         uses: actions/upload-artifact@v4
         with:
           name: prime-checker-deb
-          path: '**/*.deb'
+          path: ./*.deb
