@@ -19,12 +19,6 @@ jobs:
 
       - name: Compile Code (make build)
         run: make build
-        
-      - name: Save compiled binary artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: prime_checker_binary
-          path: prime_checker
 
   # ===================================================================
   # 2 TEST
