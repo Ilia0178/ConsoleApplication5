@@ -50,7 +50,8 @@ build: setup $(SRC)
 .PHONY: test
 test: build
 	@echo "--- Запуск тестов ---"
-
+	
+	# Тест 1: Составное число (17)
 	echo "17" | ./$(TARGET) 2>&1 | grep -q "is a prime number" || { echo "FAIL: 17"; exit 1; }
 	
 	# Тест 2: Составное число (18)
@@ -58,7 +59,17 @@ test: build
 
 	# Тест 3: Некорректный ввод (abc)
 	echo "abc" | ./$(TARGET) 2>&1 | grep -q "Error" || { echo "FAIL: abc"; exit 1; }
+	
+	@echo "Тест 4.1: Проверка нижней границы (0)..."
+	echo "0" | ./$(TARGET) 2>&1 | grep -q "Error: Number is out of the valid range" || { echo "FAIL: 0"; exit 1; }
 
+	# Тест 4.2: Верхняя граница (2,000,000,000) - Ожидается ошибка диапазона/не простое
+	@echo "Тест 4.2: Проверка верхней границы (2000000000)..."
+	echo "2000000000" | ./$(TARGET) 2>&1 | grep -q "Error: Number is out of the valid range" || { echo "FAIL: 2000000000"; exit 1; }
+
+	# Тест 4.3: Выход за верхнюю границу (2,000,000,001) - Ожидается ошибка диапазона
+	@echo "Тест 4.3: Проверка выхода за границу (2000000001)..."
+	echo "2000000001" | ./$(TARGET) 2>&1 | grep -q "Error: Number is out of the valid range" || { echo "FAIL: 2000000001"; exit 1; }
 
 	@echo "--- Тесты пройдены ---"
 

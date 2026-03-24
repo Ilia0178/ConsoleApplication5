@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   # ===================================================================
-  # ЭТАП 1: СБОРКА (BUILD)
+  # 1. BUILD
   # ===================================================================
   build_job:
     runs-on: ubuntu-latest
@@ -27,7 +27,7 @@ jobs:
           path: prime_checker 
 
   # ===================================================================
-  # ЭТАП 2: ТЕСТИРОВАНИЕ (TEST)
+  # 2. TEST
   # ===================================================================
   test_job:
     needs: build_job
@@ -48,7 +48,7 @@ jobs:
           make test 
 
   # ===================================================================
-  # ЭТАП 3: УПАКОВКА (PACKAGE)
+  # 3. PACKAGE
   # ===================================================================
   package_job:
     needs: test_job
@@ -62,7 +62,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y dpkg-dev 
 
-      - name: Run Package (make package)
+      - name: Run Package
         run: make package
 
       - name: Upload DEB package artifact
