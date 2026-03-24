@@ -51,16 +51,14 @@ build: setup $(SRC)
 test: build
 	@echo "--- Запуск тестов ---"
 
-	@echo "Тест 1: Проверка простого числа (17)..."
-	echo "17" | ./$(TARGET) | grep -q "is a prime number" || { echo "FAIL: 17 не распознано как простое"; exit 1; }
+	echo "17" | ./$(TARGET) 2>&1 | grep -q "is a prime number" || { echo "FAIL: 17"; exit 1; }
 	
 	# Тест 2: Составное число (18)
-	@echo "Тест 2: Проверка составного числа (18)..."
-	echo "18" | ./$(TARGET) | grep -q "is not a prime number" || { echo "FAIL: 18 не распознано как составное"; exit 1; }
+	echo "18" | ./$(TARGET) 2>&1 | grep -q "is not a prime number" || { echo "FAIL: 18"; exit 1; }
 
 	# Тест 3: Некорректный ввод (abc)
-	@echo "Тест 3: Проверка некорректного ввода (строка 'abc')..."
-	echo "abc" | ./$(TARGET) | grep -q "Error" || { echo "FAIL: Ошибка ввода не обработана"; exit 1; }
+	echo "abc" | ./$(TARGET) 2>&1 | grep -q "Error" || { echo "FAIL: abc"; exit 1; }
+
 
 	@echo "--- Тесты пройдены ---"
 
